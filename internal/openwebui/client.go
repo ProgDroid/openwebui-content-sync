@@ -43,6 +43,11 @@ type File struct {
 	AccessControl *string `json:"access_control"`
 }
 
+type KnowledgeResponse struct {
+	Items      []*Knowledge `json:"items"`
+	TotalCount int          `json:"total"`
+}
+
 // Knowledge represents a knowledge source in OpenWebUI
 type Knowledge struct {
 	ID            string                 `json:"id"`
@@ -216,12 +221,12 @@ func (c *Client) ListKnowledge(ctx context.Context) ([]*Knowledge, error) {
 		return nil, fmt.Errorf("list knowledge failed with status %d: %s", resp.StatusCode, string(body))
 	}
 
-	var knowledge []*Knowledge
-	if err := json.NewDecoder(resp.Body).Decode(&knowledge); err != nil {
+	var response *KnowledgeResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
 
-	return knowledge, nil
+	return response.Items, nil
 }
 
 // AddFileToKnowledge adds a file to a knowledge source
@@ -539,12 +544,14 @@ func (c *Client) GetKnowledgeFiles(ctx context.Context, knowledgeID string) ([]*
 	//logrus.Debugf("Knowledge files response body: %s", string(body))
 	logrus.Debugf("Response body length: %d bytes", len(body))
 
-	var knowledgeList []*Knowledge
-	if err := json.Unmarshal(body, &knowledgeList); err != nil {
+	var response *KnowledgeResponse
+	if err := json.Unmarshal(body, &response); err != nil {
 		logrus.Errorf("Failed to decode knowledge list response: %v", err)
 		//logrus.Errorf("Response body was: %s", string(body))
 		return nil, fmt.Errorf("failed to decode response: %w", err)
 	}
+
+	knowledgeList := response.Items
 
 	//logrus.Debugf("Successfully decoded %d knowledge sources", len(knowledgeList))
 	for i, knowledge := range knowledgeList {
